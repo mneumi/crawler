@@ -2,10 +2,10 @@ package task
 
 type Task struct {
 	URL     string
-	Handler func(string) TaskHandleResult
+	Handler func([]byte) *TaskHandleResult
 }
 
 type TaskHandleResult struct {
-	Info  interface{}
+	Info  []interface{}
 	Tasks []Task
 }

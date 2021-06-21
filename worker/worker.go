@@ -2,9 +2,9 @@ package worker
 
 import (
 	"log"
-	"math/rand"
-	"time"
 
+	"github.com/mneumi/reading-crawler/fetcher"
+	"github.com/mneumi/reading-crawler/limiter"
 	"github.com/mneumi/reading-crawler/task"
 )
 
@@ -25,32 +25,40 @@ func New(id int, in chan *task.Task, out chan *task.TaskHandleResult) *Worker {
 func (w *Worker) Start() {
 	go func() {
 		for {
+			// 限流
+			<-limiter.GetLimiter()
+
 			t := <-w.in
 
 			// fetch & parse here
-			// TOOD
-			log.Printf("#%d work start ... %v", w.ID, t.URL)
-			log.Printf("#%d work done ...", w.ID)
+			result, err := w.do(t)
 
-			rand.Seed(time.Now().UnixNano())
-			n := rand.Intn(100)
-			println(n)
-
-			if n < 2 {
-				w.out <- &task.TaskHandleResult{
-					Info: "Hello World",
-				}
-			} else {
-				w.out <- &task.TaskHandleResult{
-					Info: "Hello World",
-					Tasks: []task.Task{
-						{
-							URL:     "http://abcdefg.com",
-							Handler: nil,
-						},
-					},
-				}
+			if err != nil {
+				log.Printf("ERR: %v", err)
 			}
+
+			if result == nil {
+				continue
+			}
+
+			w.out <- result
 		}
 	}()
+}
+
+func (w *Worker) do(t *task.Task) (*task.TaskHandleResult, error) {
+	log.Printf("#%d work start ... %v", w.ID, t.URL)
+
+	body, err := fetcher.Fetch(t.URL)
+
+	if err != nil {
+		log.Printf("fetch error url: %s, err: %v", t.URL, err)
+		return &task.TaskHandleResult{}, err
+	}
+
+	if t.Handler != nil {
+		return t.Handler(body), nil
+	}
+
+	return nil, nil
 }

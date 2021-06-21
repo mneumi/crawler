@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/mneumi/reading-crawler/scheduler"
@@ -60,14 +60,17 @@ func (e *Engine) processResult() {
 		select {
 		case result := <-e.out:
 			// process result here
-			// TODO
+			if len(result.Info) > 0 {
+				log.Printf("\n\n%+v\n\n", result.Info)
+			}
 
 			for _, t := range result.Tasks {
-				e.scheduler.Submit(&t)
+				tCopy := t
+				e.scheduler.Submit(&tCopy)
 			}
-		// 如果 10 秒内，out 都没有收到新的 result，证明所有任务结束，程序退出
-		case <-time.NewTicker(10 * time.Second).C:
-			fmt.Println("all done")
+		// 如果 2 分钟内，out 都没有收到新的 result，证明所有任务结束，程序退出
+		case <-time.NewTicker(2 * time.Minute).C:
+			log.Println("all done")
 			return
 		}
 	}
