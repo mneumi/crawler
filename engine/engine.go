@@ -4,7 +4,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/go-redis/redis"
+	"github.com/mneumi/reading-crawler/persist"
 	"github.com/mneumi/reading-crawler/scheduler"
+	"github.com/mneumi/reading-crawler/site/xcar/model"
 	"github.com/mneumi/reading-crawler/task"
 	"github.com/mneumi/reading-crawler/worker"
 )
@@ -39,7 +42,14 @@ func (e *Engine) Run(ts []task.Task) {
 	}
 
 	for _, t := range ts {
-		e.scheduler.Submit(&t)
+		// ts 也进行去重的原因是把源URL也放入去重表中
+		if isDuplicate(t.URL) {
+			log.Printf("Duplicate request: %s", t.URL)
+			continue
+		}
+
+		tCopy := t
+		e.scheduler.Submit(&tCopy)
 	}
 
 	e.processResult()
@@ -60,11 +70,21 @@ func (e *Engine) processResult() {
 		select {
 		case result := <-e.out:
 			// process result here
-			if len(result.Info) > 0 {
-				log.Printf("\n\n%+v\n\n", result.Info)
+			if result.Info != nil {
+				if item, ok := result.Info.(model.CarModel); ok {
+					persist.DB.Table("car_models").Create(&item)
+				}
+				if item, ok := result.Info.(model.CarDetail); ok {
+					persist.DB.Table("car_details").Create(&item)
+				}
 			}
 
 			for _, t := range result.Tasks {
+				if isDuplicate(t.URL) {
+					log.Printf("Duplicate request: %s", t.URL)
+					continue
+				}
+
 				tCopy := t
 				e.scheduler.Submit(&tCopy)
 			}
@@ -74,4 +94,22 @@ func (e *Engine) processResult() {
 			return
 		}
 	}
+}
+
+func isDuplicate(url string) bool {
+	_, err := persist.RDB.Get(url).Result()
+
+	// 如果 err != redis.Nil，则证明库里有这个值，即重复了，直接返回
+	if err != redis.Nil {
+		return true
+	}
+
+	// 不重复，则将键加入 redis
+	err = persist.RDB.Set(url, 1, -1).Err()
+
+	if err != nil {
+		log.Printf("set score failed, err:%v\n", err)
+	}
+
+	return false
 }

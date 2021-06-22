@@ -19,18 +19,16 @@ func ParseCarModel(contents []byte, url string) *task.TaskHandleResult {
 
 	productMatch := brandRe.FindSubmatch(contents)
 	brandId := strings.ReplaceAll(url, "/", "")
-	brandName := productMatch[1]
-	brandModel := productMatch[2]
+	brandName := string(productMatch[1])
+	brandModel := string(productMatch[2])
 
 	matches := carDetailRe.FindAllSubmatch(contents, -1)
 
 	result := &task.TaskHandleResult{
-		Info: []interface{}{
-			model.CarModel{
-				LogoURL:    logoURL,
-				BrandName:  string(brandName),
-				BrandModel: string(brandModel),
-			},
+		Info: model.CarModel{
+			LogoURL:    logoURL,
+			BrandName:  brandName[:len(brandName)-1],
+			BrandModel: brandModel,
 		},
 	}
 

@@ -6,6 +6,6 @@ type Task struct {
 }
 
 type TaskHandleResult struct {
-	Info  []interface{}
+	Info  interface{}
 	Tasks []Task
 }

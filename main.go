@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/mneumi/reading-crawler/engine"
+	_ "github.com/mneumi/reading-crawler/persist"
 	"github.com/mneumi/reading-crawler/site/xcar/parser"
 	"github.com/mneumi/reading-crawler/task"
 )
@@ -19,4 +20,6 @@ func main() {
 			// },
 		},
 	})
+
+	// fmt.Println("Hello World")
 }

@@ -30,7 +30,7 @@ func ParseCarDetail(contents []byte, url string, brandId string) *task.TaskHandl
 	}
 
 	result := &task.TaskHandleResult{
-		Info: []interface{}{car},
+		Info: car,
 	}
 
 	return result
